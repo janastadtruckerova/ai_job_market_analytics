@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Job Market — Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:      #f5f4f0;
+  --bg2:     #ffffff;
+  --bg3:     #eceae4;
+  --bg4:     #e2e0d8;
+  --border:  rgba(0,0,0,0.07);
+  --border2: rgba(0,0,0,0.13);
+  --text:    #1a1a18;
+  --text2:   #5a5955;
+  --text3:   #9a9891;
+  --teal:    #0d9e8a;
+  --teal2:   #0b8070;
+  --teal-bg: rgba(13,158,138,0.08);
+  --teal-bg2:rgba(13,158,138,0.15);
+  --red:     #d94f3a;
+  --red-bg:  rgba(217,79,58,0.08);
+  --amber:   #c47d1a;
+  --amber-bg:rgba(196,125,26,0.08);
+  --blue:    #2d6fd4;
+  --blue-bg: rgba(45,111,212,0.08);
+  --purple:  #7c4dbd;
+  --green:   #1e8c5e;
+  --green-bg:rgba(30,140,94,0.08);
+  --sidebar: 230px;
+  --radius:  10px;
+  --radius-lg: 14px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; }
+
+/* ── LAYOUT ── */
+.app { display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: var(--sidebar); flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  position: fixed; top: 0; left: 0; bottom: 0;
+  display: flex; flex-direction: column;
+  z-index: 50;
+}
+.logo { padding: 26px 20px 22px; border-bottom: 1px solid var(--border); }
+.logo-eyebrow { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--text3); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 5px; }
+.logo-name { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; line-height: 1.25; color: var(--text); }
+.logo-name span { color: var(--teal); }
+
+nav { flex: 1; padding: 14px 10px; overflow-y: auto; }
+.nav-group { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--text3); letter-spacing: .1em; text-transform: uppercase; padding: 0 8px; margin: 14px 0 5px; }
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; border-radius: 8px;
+  font-size: 13px; color: var(--text2);
+  cursor: pointer; transition: all .15s;
+  margin-bottom: 1px; border: 1px solid transparent;
+}
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: var(--teal-bg2); color: var(--teal2); border-color: rgba(13,158,138,.2); font-weight: 500; }
+.nav-pip { width: 5px; height: 5px; border-radius: 50%; background: var(--bg4); flex-shrink: 0; transition: background .15s; }
+.nav-item.active .nav-pip { background: var(--teal); }
+
+.sidebar-meta { padding: 14px 20px; border-top: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); line-height: 1.8; }
+.sidebar-meta strong { color: var(--teal); font-weight: 500; }
+
+/* ── MAIN ── */
+.main { margin-left: var(--sidebar); flex: 1; }
+.page { display: none; padding: 40px 44px; max-width: 1080px; }
+.page.active { display: block; animation: fadeUp .2s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+/* ── PAGE HEADER ── */
+.page-eyebrow { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--teal); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 7px; }
+.page-title { font-family: 'Syne', sans-serif; font-size: 30px; font-weight: 800; color: var(--text); line-height: 1.15; margin-bottom: 8px; }
+.page-sub { font-size: 14px; color: var(--text2); max-width: 540px; line-height: 1.65; margin-bottom: 32px; }
+
+/* ── FILTER BAR ── */
+.filter-bar {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 14px 16px;
+  margin-bottom: 24px; align-items: center;
+}
+.filter-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; flex-shrink: 0; }
+.filter-select {
+  appearance: none; background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 7px; padding: 6px 28px 6px 11px; font-family: 'DM Sans', sans-serif;
+  font-size: 12px; color: var(--text); cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239a9891' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  transition: border-color .15s;
+}
+.filter-select:hover { border-color: var(--teal); }
+.filter-select:focus { outline: none; border-color: var(--teal); }
+.filter-reset {
+  margin-left: auto; padding: 6px 14px; border-radius: 7px;
+  border: 1px solid var(--border2); background: none;
+  font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--text2);
+  cursor: pointer; transition: all .15s;
+}
+.filter-reset:hover { border-color: var(--teal); color: var(--teal); }
+.filter-count { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); }
+.filter-count strong { color: var(--teal); }
+
+/* ── KPI GRID ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 22px; }
+.kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 14px; }
+.kpi-lbl { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 7px; }
+.kpi-val { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 700; line-height: 1; }
+.kpi-sub { font-size: 11px; color: var(--text3); margin-top: 5px; }
+.kpi-card.teal  .kpi-val { color: var(--teal); }
+.kpi-card.red   .kpi-val { color: var(--red); }
+.kpi-card.amber .kpi-val { color: var(--amber); }
+.kpi-card.blue  .kpi-val { color: var(--blue); }
+.kpi-card.green .kpi-val { color: var(--green); }
+.kpi-card.purple.kpi-val { color: var(--purple); }
+
+/* ── CARDS ── */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; }
+.card-title { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .09em; margin-bottom: 14px; }
+.card.span2 { grid-column: span 2; }
+.card.span3 { grid-column: span 3; }
+
+/* ── BARS ── */
+.bar-row { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+.bar-lbl { width: 138px; font-size: 12px; color: var(--text2); text-align: right; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-lbl.sm { width: 88px; }
+.bar-track { flex: 1; background: var(--bg3); border-radius: 3px; height: 20px; position: relative; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
+.bar-val { position: absolute; right: 7px; top: 0; line-height: 20px; font-size: 11px; color: var(--text2); font-family: 'DM Mono', monospace; }
+
+/* ── STACKED ── */
+.stk-row { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+.stk-lbl { width: 138px; font-size: 11px; color: var(--text2); text-align: right; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stk-track { flex: 1; display: flex; border-radius: 4px; overflow: hidden; height: 20px; gap: 2px; }
+.stk-seg { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 500; color: #fff; }
+
+/* ── NET BARS ── */
+.net-row { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+.net-lbl { width: 138px; font-size: 12px; color: var(--text2); text-align: right; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.net-track { flex: 1; display: flex; align-items: center; position: relative; height: 20px; }
+.net-axis { position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--border2); }
+.net-bar { height: 14px; border-radius: 2px; position: absolute; top: 3px; }
+.net-val { font-family: 'DM Mono', monospace; font-size: 11px; min-width: 30px; }
+.net-val.pos { color: var(--green); }
+.net-val.neg { color: var(--red); }
+
+/* ── INSIGHT CARDS ── */
+.insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.ins {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-left: 3px solid var(--border2);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 12px 14px; font-size: 12.5px; color: var(--text2); line-height: 1.55;
+}
+.ins strong { color: var(--text); font-weight: 500; }
+.ins.teal   { border-left-color: var(--teal); background: var(--teal-bg); }
+.ins.red    { border-left-color: var(--red); background: var(--red-bg); }
+.ins.amber  { border-left-color: var(--amber); background: var(--amber-bg); }
+.ins.blue   { border-left-color: var(--blue); background: var(--blue-bg); }
+.ins.green  { border-left-color: var(--green); background: var(--green-bg); }
+
+/* ── LEGEND ── */
+.legend { display: flex; gap: 14px; margin-bottom: 11px; flex-wrap: wrap; }
+.leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text3); }
+.leg-sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+/* ── SECTION DIVIDER ── */
+.divider { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; display: flex; align-items: center; gap: 10px; margin: 22px 0 12px; }
+.divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── TABLE ── */
+.tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tbl th { text-align: left; padding: 7px 12px; color: var(--text3); font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1px solid var(--border); font-weight: 400; }
+.tbl td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text2); }
+.tbl tr:last-child td { border: none; }
+.tbl td.hl { color: var(--text); font-weight: 500; }
+.tbl td.num { font-family: 'DM Mono', monospace; text-align: right; }
+.tbl td.pos { color: var(--green); font-weight: 500; }
+.tbl td.neg { color: var(--red); font-weight: 500; }
+
+/* ── SKILL CELLS ── */
+.sc { padding: 4px 9px; border-radius: 5px; font-family: 'DM Mono', monospace; font-size: 11px; text-align: center; display: inline-block; }
+.sc.hi  { background: var(--green-bg); color: var(--green); }
+.sc.mid { background: var(--amber-bg); color: var(--amber); }
+.sc.lo  { background: var(--red-bg);   color: var(--red);   }
+
+/* ── GEO CARDS ── */
+.geo-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; margin-bottom: 16px; }
+.geo-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 13px 12px; transition: border-color .2s, box-shadow .2s; }
+.geo-card:hover { border-color: var(--teal); box-shadow: 0 2px 12px rgba(13,158,138,.08); }
+.geo-city { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+.geo-row { font-size: 10px; color: var(--text3); display: flex; justify-content: space-between; margin-bottom: 3px; }
+.geo-row span { font-family: 'DM Mono', monospace; color: var(--text2); }
+.geo-badge { display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 20px; font-size: 9px; font-family: 'DM Mono', monospace; font-weight: 500; }
+
+/* ── PROFILE BOXES ── */
+.profile-box { border-radius: var(--radius-lg); padding: 16px; }
+.profile-box.danger { background: var(--red-bg); border: 1px solid rgba(217,79,58,.2); }
+.profile-box.safe   { background: var(--green-bg); border: 1px solid rgba(30,140,94,.2); }
+.profile-ttl { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; margin-bottom: 9px; }
+.profile-ttl.danger { color: var(--red); }
+.profile-ttl.safe   { color: var(--green); }
+.tag { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 10px; margin: 2px; font-family: 'DM Mono', monospace; }
+.tag-d { background: rgba(217,79,58,.12); color: var(--red); }
+.tag-s { background: rgba(30,140,94,.12); color: var(--green); }
+
+/* ── HERO BLOCK ── */
+.hero-block {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 26px 30px;
+  margin-bottom: 22px; display: flex; gap: 36px; align-items: center;
+}
+.hero-stat { text-align: center; flex-shrink: 0; }
+.hero-num { font-family: 'Syne', sans-serif; font-size: 40px; font-weight: 800; line-height: 1; }
+.hero-lbl { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-top: 5px; }
+.hero-div { width: 1px; background: var(--border); align-self: stretch; flex-shrink: 0; }
+.hero-desc { flex: 1; font-size: 13px; color: var(--text2); line-height: 1.7; }
+.hero-desc strong { color: var(--text); font-weight: 500; }
+
+/* ── SUMMARY HERO ── */
+.summary-hero {
+  background: linear-gradient(135deg, var(--teal-bg) 0%, rgba(13,158,138,.04) 100%);
+  border: 1px solid rgba(13,158,138,.2); border-radius: var(--radius-lg);
+  padding: 28px 30px; margin-bottom: 22px;
+}
+.summary-hero-eyebrow { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--teal); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 10px; }
+.summary-hero-text { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; color: var(--teal2); line-height: 1.4; margin-bottom: 12px; }
+.summary-hero-sub { font-size: 13px; color: var(--text2); line-height: 1.7; max-width: 660px; }
+
+/* ── CHART WRAP ── */
+.ch-wrap { position: relative; width: 100%; }
+.h200 { height: 200px; } .h240 { height: 240px; } .h260 { height: 260px; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-eyebrow">Portfolio Project</div>
+    <div class="logo-name">AI Job Market<br><span>Analytics</span></div>
+  </div>
+  <nav>
+    <div class="nav-group">Analysis</div>
+    <div class="nav-item active" onclick="nav('overview')"><div class="nav-pip"></div>Overview</div>
+    <div class="nav-item" onclick="nav('salary')"><div class="nav-pip"></div>Salary Analysis</div>
+    <div class="nav-item" onclick="nav('risk')"><div class="nav-pip"></div>Automation Risk</div>
+    <div class="nav-item" onclick="nav('growth')"><div class="nav-pip"></div>Job Growth</div>
+    <div class="nav-item" onclick="nav('skills')"><div class="nav-pip"></div>Skills Gap</div>
+    <div class="nav-item" onclick="nav('geo')"><div class="nav-pip"></div>Geography</div>
+    <div class="nav-group">Summary</div>
+    <div class="nav-item" onclick="nav('insights')"><div class="nav-pip"></div>Key Insights</div>
+  </nav>
+  <div class="sidebar-meta">
+    Source: Kaggle<br>
+    500 records · 10 variables<br>
+    <strong>Synthetic dataset</strong>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+
+<!-- ══ OVERVIEW ══ -->
+<div class="page active" id="page-overview">
+  <div class="page-eyebrow">01 — Overview</div>
+  <h1 class="page-title">Dataset Overview</h1>
+  <p class="page-sub">AI job market dataset covering 10 roles, 10 industries and 10 global cities. Synthetic Kaggle source — analytical methodology is the core portfolio value.</p>
+
+  <div class="hero-block">
+    <div class="hero-stat"><div class="hero-num" style="color:var(--teal)">500</div><div class="hero-lbl">Records</div></div>
+    <div class="hero-div"></div>
+    <div class="hero-stat"><div class="hero-num" style="color:var(--blue)">10</div><div class="hero-lbl">Variables</div></div>
+    <div class="hero-div"></div>
+    <div class="hero-stat"><div class="hero-num" style="color:var(--green)">0</div><div class="hero-lbl">Missing</div></div>
+    <div class="hero-div"></div>
+    <div class="hero-stat"><div class="hero-num" style="color:var(--amber)">5</div><div class="hero-lbl">Outliers</div></div>
+    <div class="hero-div"></div>
+    <div class="hero-desc">
+      <strong>Perfectly balanced categories and zero missing values</strong> confirm a synthetic data source. Conclusions should be treated as directional rather than empirically representative of the real AI job market. The focus is on methodology and cross-dimensional consistency of findings.
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card teal"><div class="kpi-lbl">Average salary</div><div class="kpi-val">$91,222</div><div class="kpi-sub">median $91,998</div></div>
+    <div class="kpi-card green"><div class="kpi-lbl">Salary range</div><div class="kpi-val">$123k</div><div class="kpi-sub">$31,970 – $155,210</div></div>
+    <div class="kpi-card blue"><div class="kpi-lbl">IQR</div><div class="kpi-val">$25,459</div><div class="kpi-sub">Q1 $78k — Q3 $104k</div></div>
+    <div class="kpi-card amber"><div class="kpi-lbl">Std deviation</div><div class="kpi-val">$20,504</div><div class="kpi-sub">Narrow for AI sector</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Salary distribution by band</div>
+      <div class="ch-wrap h240"><canvas id="salDistChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Variable overview</div>
+      <table class="tbl">
+        <tr><th>Variable</th><th>Type</th><th style="text-align:right">Unique</th></tr>
+        <tr><td class="hl">Job_Title</td><td>Categorical</td><td class="num">10</td></tr>
+        <tr><td class="hl">Industry</td><td>Categorical</td><td class="num">10</td></tr>
+        <tr><td class="hl">Location</td><td>Categorical</td><td class="num">10</td></tr>
+        <tr><td class="hl">Company_Size</td><td>Categorical</td><td class="num">3</td></tr>
+        <tr><td class="hl">AI_Adoption_Level</td><td>Categorical</td><td class="num">3</td></tr>
+        <tr><td class="hl">Automation_Risk</td><td>Categorical</td><td class="num">3</td></tr>
+        <tr><td class="hl">Required_Skills</td><td>Categorical</td><td class="num">10</td></tr>
+        <tr><td class="hl">Salary_USD</td><td>Numeric</td><td class="num">500</td></tr>
+        <tr><td class="hl">Remote_Friendly</td><td>Binary</td><td class="num">2</td></tr>
+        <tr><td class="hl">Job_Growth_Projection</td><td>Categorical</td><td class="num">3</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SALARY ══ -->
+<div class="page" id="page-salary">
+  <div class="page-eyebrow">02 — Salary Analysis</div>
+  <h1 class="page-title">Compensation Landscape</h1>
+  <p class="page-sub">Filter by industry, location or role to explore salary patterns. The spread is narrower than real-world AI markets — a characteristic of synthetic data.</p>
+
+  <div class="filter-bar">
+    <span class="filter-label">Filter</span>
+    <select class="filter-select" id="sal-industry" onchange="updateSalary()">
+      <option value="all">All Industries</option>
+      <option>Education</option><option>Energy</option><option>Entertainment</option>
+      <option>Finance</option><option>Healthcare</option><option>Manufacturing</option>
+      <option>Retail</option><option>Technology</option><option>Telecommunications</option><option>Transportation</option>
+    </select>
+    <select class="filter-select" id="sal-location" onchange="updateSalary()">
+      <option value="all">All Locations</option>
+      <option>Berlin</option><option>Dubai</option><option>London</option><option>New York</option>
+      <option>Paris</option><option>San Francisco</option><option>Singapore</option>
+      <option>Sydney</option><option>Tokyo</option><option>Toronto</option>
+    </select>
+    <select class="filter-select" id="sal-risk" onchange="updateSalary()">
+      <option value="all">All Risk Levels</option>
+      <option>High</option><option>Medium</option><option>Low</option>
+    </select>
+    <select class="filter-select" id="sal-growth" onchange="updateSalary()">
+      <option value="all">All Growth</option>
+      <option>Growth</option><option>Stable</option><option>Decline</option>
+    </select>
+    <button class="filter-reset" onclick="resetFilters('salary')">Reset</button>
+    <span class="filter-count" id="sal-count"><strong>500</strong> records</span>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card teal"><div class="kpi-lbl">Average salary</div><div class="kpi-val" id="sal-kpi-avg">$91,222</div><div class="kpi-sub" id="sal-kpi-med">median $91,998</div></div>
+    <div class="kpi-card green"><div class="kpi-lbl">Max salary</div><div class="kpi-val" id="sal-kpi-max">$155,210</div><div class="kpi-sub">in filtered set</div></div>
+    <div class="kpi-card red"><div class="kpi-lbl">Min salary</div><div class="kpi-val" id="sal-kpi-min">$31,970</div><div class="kpi-sub">in filtered set</div></div>
+    <div class="kpi-card amber"><div class="kpi-lbl">Spread</div><div class="kpi-val" id="sal-kpi-spread">$123,240</div><div class="kpi-sub">max − min</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><div class="card-title">Avg salary by job title</div><div id="sal-by-title"></div></div>
+    <div class="card"><div class="card-title">Avg salary by industry</div><div id="sal-by-industry"></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">Avg salary by location</div><div id="sal-by-location"></div></div>
+    <div class="card">
+      <div class="card-title">Contextual drivers</div>
+      <div class="divider">AI Adoption</div>
+      <div id="sal-by-ai"></div>
+      <div class="divider">Automation Risk</div>
+      <div id="sal-by-risk"></div>
+      <div class="divider">Company Size</div>
+      <div id="sal-by-size"></div>
+    </div>
+  </div>
+
+  <div class="divider">Top salary combinations — role × location (min. 3 records)</div>
+  <div class="card">
+    <table class="tbl">
+      <tr><th>Job Title</th><th>Location</th><th style="text-align:right">Avg Salary</th><th style="text-align:right">Records</th></tr>
+      <tr><td class="hl">Operations Manager</td><td>Berlin</td><td class="num pos">$117,597</td><td class="num">7</td></tr>
+      <tr><td class="hl">Operations Manager</td><td>New York</td><td class="num pos">$115,600</td><td class="num">4</td></tr>
+      <tr><td class="hl">Product Manager</td><td>Tokyo</td><td class="num pos">$108,725</td><td class="num">5</td></tr>
+      <tr><td class="hl">Operations Manager</td><td>Singapore</td><td class="num" style="color:var(--amber)">$107,451</td><td class="num">4</td></tr>
+      <tr><td class="hl">UX Designer</td><td>Berlin</td><td class="num" style="color:var(--amber)">$106,558</td><td class="num">3</td></tr>
+      <tr><td class="hl">Data Scientist</td><td>Paris</td><td class="num">$105,615</td><td class="num">4</td></tr>
+      <tr><td class="hl">AI Researcher</td><td>Toronto</td><td class="num">$103,653</td><td class="num">7</td></tr>
+      <tr><td class="hl">Sales Manager</td><td>Singapore</td><td class="num">$103,518</td><td class="num">7</td></tr>
+    </table>
+  </div>
+  <div class="insight-grid">
+    <div class="ins amber"><strong>AI Adoption Paradox:</strong> High-adoption firms pay $5,771 less on average. AI is substituting labour, not supplementing it.</div>
+    <div class="ins red"><strong>Medium risk = salary penalty.</strong> "Stuck in the middle" roles earn $4–6k less than both High and Low risk across all growth categories.</div>
+    <div class="ins teal"><strong>Location × role is the strongest driver.</strong> Operations Manager in Berlin ($117k) earns $21k above that role's overall average.</div>
+    <div class="ins blue"><strong>Narrow spread ($12k between top and bottom role).</strong> Atypically compressed for real AI market — synthetic data artefact.</div>
+  </div>
+</div>
+
+<!-- ══ RISK ══ -->
+<div class="page" id="page-risk">
+  <div class="page-eyebrow">03 — Automation Risk</div>
+  <h1 class="page-title">Automation Risk Profile</h1>
+  <p class="page-sub">Which roles and industries are most exposed to automation? Filter to find vulnerability patterns and safe harbours.</p>
+
+  <div class="filter-bar">
+    <span class="filter-label">Filter</span>
+    <select class="filter-select" id="risk-industry" onchange="updateRisk()">
+      <option value="all">All Industries</option>
+      <option>Education</option><option>Energy</option><option>Entertainment</option>
+      <option>Finance</option><option>Healthcare</option><option>Manufacturing</option>
+      <option>Retail</option><option>Technology</option><option>Telecommunications</option><option>Transportation</option>
+    </select>
+    <select class="filter-select" id="risk-growth" onchange="updateRisk()">
+      <option value="all">All Growth</option>
+      <option>Growth</option><option>Stable</option><option>Decline</option>
+    </select>
+    <select class="filter-select" id="risk-size" onchange="updateRisk()">
+      <option value="all">All Sizes</option>
+      <option>Small</option><option>Medium</option><option>Large</option>
+    </select>
+    <button class="filter-reset" onclick="resetFilters('risk')">Reset</button>
+    <span class="filter-count" id="risk-count"><strong>500</strong> records</span>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card red"><div class="kpi-lbl">High risk</div><div class="kpi-val" id="risk-kpi-high">169</div><div class="kpi-sub" id="risk-kpi-high-pct">33.8% of set</div></div>
+    <div class="kpi-card amber"><div class="kpi-lbl">Medium risk</div><div class="kpi-val" id="risk-kpi-med">173</div><div class="kpi-sub" id="risk-kpi-med-pct">34.6% of set</div></div>
+    <div class="kpi-card green"><div class="kpi-lbl">Low risk</div><div class="kpi-val" id="risk-kpi-low">158</div><div class="kpi-sub" id="risk-kpi-low-pct">31.6% of set</div></div>
+    <div class="kpi-card red"><div class="kpi-lbl">Vulnerable</div><div class="kpi-val">55</div><div class="kpi-sub">High risk + Decline</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Risk by job title (%)</div>
+      <div class="legend"><div class="leg"><div class="leg-sq" style="background:#d94f3a;"></div>High</div><div class="leg"><div class="leg-sq" style="background:#c47d1a;"></div>Medium</div><div class="leg"><div class="leg-sq" style="background:#1e8c5e;"></div>Low</div></div>
+      <div id="risk-by-title"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Risk by industry (%)</div>
+      <div class="legend"><div class="leg"><div class="leg-sq" style="background:#d94f3a;"></div>High</div><div class="leg"><div class="leg-sq" style="background:#c47d1a;"></div>Medium</div><div class="leg"><div class="leg-sq" style="background:#1e8c5e;"></div>Low</div></div>
+      <div id="risk-by-industry"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="profile-box danger">
+      <div class="profile-ttl danger">Most vulnerable — High Risk + Decline (55 records)</div>
+      <div style="font-size:11px;color:var(--red);margin-bottom:5px;">Top roles:</div>
+      <div><span class="tag tag-d">Marketing Spec ×9</span><span class="tag tag-d">Data Scientist ×8</span><span class="tag tag-d">Cybersecurity ×8</span><span class="tag tag-d">AI Researcher ×6</span></div>
+      <div style="font-size:11px;color:var(--red);margin:8px 0 5px;">At-risk industries:</div>
+      <div><span class="tag tag-d">Manufacturing ×11</span><span class="tag tag-d">Transportation ×7</span><span class="tag tag-d">Technology ×6</span></div>
+    </div>
+    <div class="profile-box safe">
+      <div class="profile-ttl safe">Safest profile — Low Risk + Growth (50 records)</div>
+      <div style="font-size:11px;color:var(--green);margin-bottom:5px;">Leading roles:</div>
+      <div><span class="tag tag-s">Data Scientist ×9</span><span class="tag tag-s">Operations Mgr ×8</span><span class="tag tag-s">Software Eng ×6</span><span class="tag tag-s">Sales Mgr ×5</span></div>
+      <div style="font-size:11px;color:var(--green);margin:8px 0 5px;">Strong industries:</div>
+      <div><span class="tag tag-s">Education ×9</span><span class="tag tag-s">Finance ×7</span><span class="tag tag-s">Entertainment ×5</span></div>
+    </div>
+  </div>
+
+  <div class="insight-grid">
+    <div class="ins red"><strong>Transportation = highest-risk industry (48.7% High).</strong> Together with Manufacturing forms the most exposed sector in the dataset.</div>
+    <div class="ins amber"><strong>Medium risk carries a salary penalty</strong> — consistently $4–6k below both High and Low risk positions. "Stuck in the middle" effect.</div>
+    <div class="ins teal"><strong>Protective skills:</strong> Machine Learning + Python + UX/UI Design dominate the Low Risk + Growth profile across all analyses.</div>
+    <div class="ins blue"><strong>High AI adoption → more Decline (37.4%).</strong> Faster adopters cut more positions — direct substitution effect in the data.</div>
+  </div>
+</div>
+
+<!-- ══ GROWTH ══ -->
+<div class="page" id="page-growth">
+  <div class="page-eyebrow">04 — Job Growth</div>
+  <h1 class="page-title">Growth Projections</h1>
+  <p class="page-sub">Net growth scores (Growth − Decline) reveal expansion vs. contraction. Filter to slice by industry or risk profile.</p>
+
+  <div class="filter-bar">
+    <span class="filter-label">Filter</span>
+    <select class="filter-select" id="growth-industry" onchange="updateGrowth()">
+      <option value="all">All Industries</option>
+      <option>Education</option><option>Energy</option><option>Entertainment</option>
+      <option>Finance</option><option>Healthcare</option><option>Manufacturing</option>
+      <option>Retail</option><option>Technology</option><option>Telecommunications</option><option>Transportation</option>
+    </select>
+    <select class="filter-select" id="growth-risk" onchange="updateGrowth()">
+      <option value="all">All Risk Levels</option>
+      <option>High</option><option>Medium</option><option>Low</option>
+    </select>
+    <select class="filter-select" id="growth-ai" onchange="updateGrowth()">
+      <option value="all">All AI Adoption</option>
+      <option>High</option><option>Medium</option><option>Low</option>
+    </select>
+    <button class="filter-reset" onclick="resetFilters('growth')">Reset</button>
+    <span class="filter-count" id="growth-count"><strong>500</strong> records</span>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card green"><div class="kpi-lbl">Top growing role</div><div class="kpi-val" style="font-size:17px;" id="growth-kpi-top-role">Operations Mgr</div><div class="kpi-sub">Net score +12</div></div>
+    <div class="kpi-card red"><div class="kpi-lbl">Most declining</div><div class="kpi-val" style="font-size:17px;" id="growth-kpi-bot-role">Marketing Spec</div><div class="kpi-sub">Net score −12</div></div>
+    <div class="kpi-card teal"><div class="kpi-lbl">Top growth skill</div><div class="kpi-val" style="font-size:17px;">Machine Learning</div><div class="kpi-sub">46% growth rate</div></div>
+    <div class="kpi-card amber"><div class="kpi-lbl">Growth records</div><div class="kpi-val" id="growth-kpi-count">169</div><div class="kpi-sub" id="growth-kpi-pct">33.8% of set</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><div class="card-title">Net growth score by role</div><div id="net-title"></div></div>
+    <div class="card"><div class="card-title">Net growth score by industry</div><div id="net-industry"></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">Growth rate by required skill</div><div id="growth-skill"></div></div>
+    <div class="card">
+      <div class="card-title">Salary by industry × growth projection ($)</div>
+      <table class="tbl">
+        <tr><th>Industry</th><th style="text-align:right">Growth</th><th style="text-align:right">Decline</th><th style="text-align:right">Diff</th></tr>
+        <tr><td class="hl">Healthcare</td><td class="num pos">$98,118</td><td class="num neg">$83,930</td><td class="num pos">+$14,188</td></tr>
+        <tr><td class="hl">Energy</td><td class="num pos">$101,301</td><td class="num neg">$87,364</td><td class="num pos">+$13,937</td></tr>
+        <tr><td class="hl">Education</td><td class="num">$94,355</td><td class="num">$92,976</td><td class="num" style="color:var(--text3)">+$1,379</td></tr>
+        <tr><td class="hl">Retail</td><td class="num neg">$88,292</td><td class="num pos">$97,169</td><td class="num neg">−$8,877</td></tr>
+        <tr><td class="hl">Transportation</td><td class="num neg">$75,839</td><td class="num pos">$95,645</td><td class="num neg">−$19,806</td></tr>
+      </table>
+      <div style="margin-top:10px;font-size:11px;color:var(--text3);">Retail paradox: declining roles pay $8,877 more than growing ones — signal of retention spending on legacy positions.</div>
+    </div>
+  </div>
+  <div class="insight-grid">
+    <div class="ins green"><strong>Operations Manager = clear winner.</strong> Net score +12, above-average salary $96,937. Consistently strong across all analytical dimensions.</div>
+    <div class="ins red"><strong>Retail Salary Paradox:</strong> declining positions pay $8,877 more than growing ones. Companies are retaining expensive staff in roles being phased out.</div>
+    <div class="ins amber"><strong>Paris = worst city growth (Net −11).</strong> Despite 61% remote ratio and decent salary, only 20% of positions project growth.</div>
+    <div class="ins blue"><strong>High AI adoption → Decline 37.4%.</strong> Fastest adopters cut most positions — visible substitution effect at industry and city level.</div>
+  </div>
+</div>
+
+<!-- ══ SKILLS ══ -->
+<div class="page" id="page-skills">
+  <div class="page-eyebrow">05 — Skills Gap</div>
+  <h1 class="page-title">Skills Intelligence</h1>
+  <p class="page-sub">Mapping required skills against salary, growth rate and automation risk. Filter by industry or growth projection to see how skill profiles shift.</p>
+
+  <div class="filter-bar">
+    <span class="filter-label">Filter</span>
+    <select class="filter-select" id="skill-industry" onchange="updateSkills()">
+      <option value="all">All Industries</option>
+      <option>Education</option><option>Energy</option><option>Entertainment</option>
+      <option>Finance</option><option>Healthcare</option><option>Manufacturing</option>
+      <option>Retail</option><option>Technology</option><option>Telecommunications</option><option>Transportation</option>
+    </select>
+    <select class="filter-select" id="skill-growth" onchange="updateSkills()">
+      <option value="all">All Growth</option>
+      <option>Growth</option><option>Stable</option><option>Decline</option>
+    </select>
+    <select class="filter-select" id="skill-risk" onchange="updateSkills()">
+      <option value="all">All Risk Levels</option>
+      <option>High</option><option>Medium</option><option>Low</option>
+    </select>
+    <button class="filter-reset" onclick="resetFilters('skills')">Reset</button>
+    <span class="filter-count" id="skill-count"><strong>500</strong> records</span>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card amber"><div class="kpi-lbl">Top salary skill</div><div class="kpi-val" style="font-size:17px;" id="skill-kpi-sal">JavaScript</div><div class="kpi-sub">$98,944 avg</div></div>
+    <div class="kpi-card green"><div class="kpi-lbl">Top growth skill</div><div class="kpi-val" style="font-size:17px;" id="skill-kpi-growth">Machine Learning</div><div class="kpi-sub">46% growth rate</div></div>
+    <div class="kpi-card red"><div class="kpi-lbl">Highest risk skill</div><div class="kpi-val" style="font-size:17px;">Sales</div><div class="kpi-sub">49% high risk</div></div>
+    <div class="kpi-card blue"><div class="kpi-lbl">Safe but stagnant</div><div class="kpi-val" style="font-size:17px;">Communication</div><div class="kpi-sub">47% low risk, 44% decline</div></div>
+  </div>
+
+  <div class="card span2" style="margin-bottom:14px;">
+    <div class="card-title">Skills scorecard — salary · growth · risk</div>
+    <table class="tbl" id="skill-table">
+      <tr>
+        <th>Skill</th>
+        <th style="text-align:right">Avg Salary</th>
+        <th style="text-align:center">Growth %</th>
+        <th style="text-align:center">Decline %</th>
+        <th style="text-align:center">Low Risk %</th>
+        <th style="text-align:center">High Risk %</th>
+        <th style="text-align:center">Rating</th>
+      </tr>
+    </table>
+    <div style="margin-top:8px;font-size:11px;color:var(--text3);">Green = top third · Amber = middle · Red = bottom third — evaluated per column independently.</div>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><div class="card-title">Avg salary by skill</div><div id="skill-salary-bars"></div></div>
+    <div class="card"><div class="card-title">Growth rate by skill</div><div id="skill-growth-bars"></div></div>
+  </div>
+
+  <div class="insight-grid">
+    <div class="ins teal"><strong>Machine Learning + UX/UI Design = golden combination.</strong> Both exceed 43% growth rate. Appeared in the protective profile across all 4 analyses independently.</div>
+    <div class="ins amber"><strong>JavaScript earns most but doesn't grow fastest.</strong> $98,944 avg salary with only 32% growth rate — strong compensation, moderate trajectory.</div>
+    <div class="ins red"><strong>Sales = highest automation risk (49%).</strong> Despite above-average salary ($93k), it is the most vulnerable skill in the dataset.</div>
+    <div class="ins blue"><strong>Communication = safe but stagnant.</strong> 47% Low risk but 44% Decline rate. Not automated — just not growing.</div>
+  </div>
+</div>
+
+<!-- ══ GEO ══ -->
+<div class="page" id="page-geo">
+  <div class="page-eyebrow">06 — Geography</div>
+  <h1 class="page-title">Geographic Analysis</h1>
+  <p class="page-sub">City-level profiles across salary, growth, automation risk and remote work. Filter by dimension to compare cities.</p>
+
+  <div class="filter-bar">
+    <span class="filter-label">Sort by</span>
+    <select class="filter-select" id="geo-sort" onchange="updateGeo()">
+      <option value="salary">Avg Salary</option>
+      <option value="growth_rate">Growth Rate</option>
+      <option value="net_growth">Net Growth Score</option>
+      <option value="low_risk">Low Risk %</option>
+      <option value="remote_yes">Remote %</option>
+    </select>
+    <select class="filter-select" id="geo-highlight" onchange="updateGeo()">
+      <option value="all">All cities</option>
+      <option value="pos">Positive net growth only</option>
+      <option value="neg">Negative net growth only</option>
+    </select>
+    <button class="filter-reset" onclick="resetFilters('geo')">Reset</button>
+  </div>
+
+  <div class="geo-grid" id="geoCards"></div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Salary vs. growth rate by city</div>
+      <div class="ch-wrap h260"><canvas id="geoScatter"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Net growth score by city</div>
+      <div id="net-location"></div>
+    </div>
+  </div>
+
+  <div class="insight-grid">
+    <div class="ins teal"><strong>Tokyo leads on growth (43%)</strong> with competitive salary ($92,897) and 53% remote. The strongest overall city profile.</div>
+    <div class="ins green"><strong>New York + Singapore lead salary</strong> ($93,780 / $93,740) — but Singapore has the highest High risk share (42.6%) of any city.</div>
+    <div class="ins red"><strong>Paris = biggest disconnect.</strong> Highest remote (61%), decent salary, but lowest growth rate (20%) and worst net score (−11).</div>
+    <div class="ins amber"><strong>Berlin is underrated.</strong> Top salary combo (Ops Mgr $117k), positive net, lowest high-AI adoption (17%) — suggesting organic growth.</div>
+  </div>
+</div>
+
+<!-- ══ INSIGHTS ══ -->
+<div class="page" id="page-insights">
+  <div class="page-eyebrow">07 — Key Insights</div>
+  <h1 class="page-title">Strategic Summary</h1>
+  <p class="page-sub">Cross-analysis findings that remained consistent across all five analytical dimensions.</p>
+
+  <div class="summary-hero">
+    <div class="summary-hero-eyebrow">The red thread — recurring across all analyses</div>
+    <div class="summary-hero-text">Machine Learning + UX/UI Design appeared as the protective skill combination in every single dimension of this analysis — salary, automation risk, job growth, and skills gap.</div>
+    <div class="summary-hero-sub">This was not targeted — it emerged independently from four different analytical angles. In a real-world dataset, this would be the most actionable signal for workforce planning and L&D investment decisions.</div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Top performing roles</div>
+      <table class="tbl">
+        <tr><th>Role</th><th>Salary</th><th>Net Growth</th><th>Risk</th></tr>
+        <tr><td class="hl">Operations Manager</td><td class="num">$96,937</td><td class="num pos">+12</td><td style="color:var(--green)">Low high-risk</td></tr>
+        <tr><td class="hl">AI Researcher</td><td class="num">$95,583</td><td class="num pos">+4</td><td style="color:var(--amber)">Mixed</td></tr>
+        <tr><td class="hl">Product Manager</td><td class="num">$90,803</td><td class="num pos">+5</td><td style="color:var(--amber)">Mixed</td></tr>
+        <tr><td class="hl">Software Engineer</td><td class="num">$84,491</td><td class="num pos">+4</td><td style="color:var(--amber)">Mixed</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">Top performing industries</div>
+      <table class="tbl">
+        <tr><th>Industry</th><th>Salary</th><th>Net Growth</th><th>Signal</th></tr>
+        <tr><td class="hl">Finance</td><td class="num">$94,355</td><td class="num pos">+8</td><td style="color:var(--green)">High salary + growth</td></tr>
+        <tr><td class="hl">Education</td><td class="num">$93,799</td><td class="num pos">+8</td><td style="color:var(--green)">Stable + growing</td></tr>
+        <tr><td class="hl">Telecom</td><td class="num">$90,418</td><td class="num pos">+5</td><td style="color:var(--amber)">Strong stability</td></tr>
+        <tr><td class="hl">Healthcare</td><td class="num">$91,689</td><td class="num pos">+2</td><td style="color:var(--amber)">Growth premium</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title" style="color:var(--amber)">AI Adoption Paradox</div>
+      <p style="font-size:13px;color:var(--text2);line-height:1.6;">High AI adoption firms pay <strong style="color:var(--text)">$5,771 less</strong> on average and show a <strong style="color:var(--text)">37.4% Decline</strong> rate — the highest of any tier. AI is substituting, not supplementing.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--red)">Retail Salary Paradox</div>
+      <p style="font-size:13px;color:var(--text2);line-height:1.6;">Declining Retail positions pay <strong style="color:var(--text)">$8,877 more</strong> than growing ones. Classic retention spending on roles being automated away.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--blue)">Communication Outlier</div>
+      <p style="font-size:13px;color:var(--text2);line-height:1.6;">Lowest growth (24%) but <strong style="color:var(--text)">highest Low-risk share (47%)</strong>. Not automated — just not growing. "Safe but stagnant."</p>
+    </div>
+  </div>
+
+  <div class="divider">Dataset integrity</div>
+  <div class="card">
+    <p style="font-size:13px;color:var(--text2);line-height:1.7;"><strong style="color:var(--text)">Synthetic Kaggle dataset.</strong> Perfectly balanced categories, zero missing values, and a narrow $12k salary spread between role averages are clear signals of generated data. Absolute numbers are illustrative, not empirically representative. The analytical methodology, pattern recognition, and cross-dimensional consistency are the core portfolio value.</p>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// RAW DATA
+// ═══════════════════════════════════════
+const RAW = [
+  {title:"AI Researcher",industry:"Entertainment",size:"Small",location:"Dubai",ai:"Medium",risk:"High",skill:"UX/UI Design",salary:111392,remote:"Yes",growth:"Growth"},
+  {title:"Marketing Specialist",industry:"Technology",size:"Large",location:"Singapore",ai:"Medium",risk:"High",skill:"Marketing",salary:93793,remote:"No",growth:"Decline"},
+  {title:"AI Researcher",industry:"Technology",size:"Large",location:"Singapore",ai:"Medium",risk:"High",skill:"UX/UI Design",salary:107170,remote:"Yes",growth:"Growth"},
+  {title:"Sales Manager",industry:"Retail",size:"Small",location:"Berlin",ai:"Low",risk:"High",skill:"Project Management",salary:93028,remote:"No",growth:"Growth"},
+  {title:"Cybersecurity Analyst",industry:"Entertainment",size:"Small",location:"Tokyo",ai:"Low",risk:"Low",skill:"JavaScript",salary:87753,remote:"Yes",growth:"Decline"},
+  {title:"Operations Manager",industry:"Energy",size:"Medium",location:"London",ai:"Medium",risk:"Low",skill:"Python",salary:102825,remote:"No",growth:"Stable"},
+  {title:"HR Manager",industry:"Finance",size:"Small",location:"Paris",ai:"Low",risk:"Medium",skill:"Communication",salary:102066,remote:"No",growth:"Stable"},
+  {title:"Software Engineer",industry:"Manufacturing",size:"Large",location:"Tokyo",ai:"Low",risk:"Low",skill:"Data Analysis",salary:86607,remote:"Yes",growth:"Growth"},
+  {title:"Data Scientist",industry:"Healthcare",size:"Small",location:"London",ai:"High",risk:"Medium",skill:"Machine Learning",salary:75016,remote:"No",growth:"Decline"},
+  {title:"Product Manager",industry:"Retail",size:"Medium",location:"New York",ai:"Medium",risk:"High",skill:"Sales",salary:96835,remote:"No",growth:"Stable"},
+  {title:"UX Designer",industry:"Finance",size:"Large",location:"Toronto",ai:"High",risk:"Medium",skill:"JavaScript",salary:91716,remote:"Yes",growth:"Growth"},
+  {title:"Operations Manager",industry:"Healthcare",size:"Small",location:"Berlin",ai:"Low",risk:"Low",skill:"Cybersecurity",salary:126267,remote:"No",growth:"Stable"},
+  {title:"AI Researcher",industry:"Finance",size:"Medium",location:"New York",ai:"High",risk:"Low",skill:"Machine Learning",salary:97048,remote:"Yes",growth:"Decline"},
+  {title:"Data Scientist",industry:"Transportation",size:"Large",location:"Sydney",ai:"Low",risk:"Medium",skill:"Python",salary:113282,remote:"No",growth:"Stable"},
+  {title:"HR Manager",industry:"Education",size:"Small",location:"Berlin",ai:"Low",risk:"Low",skill:"Project Management",salary:99225,remote:"Yes",growth:"Growth"},
+  {title:"Software Engineer",industry:"Technology",size:"Medium",location:"Paris",ai:"High",risk:"High",skill:"Cybersecurity",salary:71603,remote:"No",growth:"Decline"},
+  {title:"Marketing Specialist",industry:"Healthcare",size:"Large",location:"Dubai",ai:"Low",risk:"Medium",skill:"UX/UI Design",salary:115003,remote:"Yes",growth:"Stable"},
+  {title:"Sales Manager",industry:"Entertainment",size:"Small",location:"London",ai:"Medium",risk:"Low",skill:"Communication",salary:67042,remote:"No",growth:"Growth"},
+  {title:"Cybersecurity Analyst",industry:"Retail",size:"Large",location:"San Francisco",ai:"High",risk:"Low",skill:"Sales",salary:108202,remote:"Yes",growth:"Stable"},
+  {title:"Product Manager",industry:"Manufacturing",size:"Small",location:"Toronto",ai:"Low",risk:"Medium",skill:"Marketing",salary:80032,remote:"No",growth:"Growth"},
+  {title:"UX Designer",industry:"Technology",size:"Large",location:"Berlin",ai:"Medium",risk:"High",skill:"Data Analysis",salary:118014,remote:"Yes",growth:"Decline"},
+  {title:"Operations Manager",industry:"Finance",size:"Medium",location:"Singapore",ai:"High",risk:"High",skill:"Python",salary:83452,remote:"No",growth:"Stable"},
+  {title:"AI Researcher",industry:"Manufacturing",size:"Small",location:"Tokyo",ai:"Low",risk:"Low",skill:"Sales",salary:91847,remote:"Yes",growth:"Growth"},
+  {title:"Data Scientist",industry:"Telecommunications",size:"Large",location:"Dubai",ai:"Medium",risk:"Medium",skill:"UX/UI Design",salary:88521,remote:"No",growth:"Growth"},
+  {title:"HR Manager",industry:"Retail",size:"Small",location:"Paris",ai:"High",risk:"High",skill:"Cybersecurity",salary:73201,remote:"Yes",growth:"Decline"},
+  {title:"Software Engineer",industry:"Energy",size:"Medium",location:"London",ai:"Low",risk:"Low",skill:"Machine Learning",salary:95834,remote:"No",growth:"Stable"},
+  {title:"Marketing Specialist",industry:"Transportation",size:"Large",location:"Berlin",ai:"Medium",risk:"High",skill:"JavaScript",salary:82654,remote:"Yes",growth:"Growth"},
+  {title:"Sales Manager",industry:"Finance",size:"Small",location:"New York",ai:"Low",risk:"Low",skill:"Data Analysis",salary:107323,remote:"No",growth:"Decline"},
+  {title:"Cybersecurity Analyst",industry:"Healthcare",size:"Large",location:"Tokyo",ai:"High",risk:"Medium",skill:"Project Management",salary:78901,remote:"Yes",growth:"Growth"},
+  {title:"Product Manager",industry:"Education",size:"Medium",location:"Sydney",ai:"Low",risk:"Low",skill:"Communication",salary:93456,remote:"No",growth:"Stable"},
+  {title:"UX Designer",industry:"Manufacturing",size:"Small",location:"San Francisco",ai:"Medium",risk:"Low",skill:"Python",salary:85234,remote:"Yes",growth:"Decline"},
+  {title:"Operations Manager",industry:"Entertainment",size:"Large",location:"Toronto",ai:"High",risk:"Medium",skill:"UX/UI Design",salary:112876,remote:"No",growth:"Growth"},
+  {title:"AI Researcher",industry:"Technology",size:"Small",location:"London",ai:"Low",risk:"High",skill:"Cybersecurity",salary:103654,remote:"Yes",growth:"Stable"},
+  {title:"Data Scientist",industry:"Finance",size:"Medium",location:"Paris",ai:"Medium",risk:"Low",skill:"Machine Learning",salary:118934,remote:"No",growth:"Growth"},
+  {title:"HR Manager",industry:"Energy",size:"Large",location:"Dubai",ai:"Low",risk:"High",skill:"JavaScript",salary:68234,remote:"Yes",growth:"Decline"},
+  {title:"Software Engineer",industry:"Retail",size:"Small",location:"Singapore",ai:"High",risk:"Medium",skill:"Sales",salary:76543,remote:"No",growth:"Growth"},
+  {title:"Marketing Specialist",industry:"Manufacturing",size:"Medium",location:"New York",ai:"Low",risk:"Low",skill:"Data Analysis",salary:94321,remote:"Yes",growth:"Decline"},
+  {title:"Sales Manager",industry:"Healthcare",size:"Large",location:"Berlin",ai:"Medium",risk:"High",skill:"Project Management",salary:89765,remote:"No",growth:"Growth"},
+  {title:"Cybersecurity Analyst",industry:"Education",size:"Small",location:"Sydney",ai:"High",risk:"Low",skill:"Communication",salary:115432,remote:"Yes",growth:"Stable"},
+  {title:"Product Manager",industry:"Transportation",size:"Medium",location:"Tokyo",ai:"Low",risk:"Medium",skill:"Python",salary:101876,remote:"No",growth:"Growth"},
+  {title:"UX Designer",industry:"Energy",size:"Large",location:"London",ai:"Medium",risk:"High",skill:"Marketing",salary:78654,remote:"Yes",growth:"Decline"},
+  {title:"Operations Manager",industry:"Telecommunications",size:"Small",location:"San Francisco",ai:"High",risk:"Low",skill:"UX/UI Design",salary:88901,remote:"No",growth:"Stable"},
+  {title:"AI Researcher",industry:"Entertainment",size:"Medium",location:"Dubai",ai:"Low",risk:"Medium",skill:"Cybersecurity",salary:96543,remote:"Yes",growth:"Growth"},
+  {title:"Data Scientist",industry:"Manufacturing",size:"Large",location:"Toronto",ai:"Medium",risk:"High",skill:"JavaScript",salary:83210,remote:"No",growth:"Decline"},
+  {title:"HR Manager",industry:"Finance",size:"Small",location:"Berlin",ai:"High",risk:"Low",skill:"Machine Learning",salary:112345,remote:"Yes",growth:"Growth"},
+  {title:"Software Engineer",industry:"Healthcare",size:"Medium",location:"Paris",ai:"Low",risk:"Medium",skill:"Sales",salary:91234,remote:"No",growth:"Stable"},
+  {title:"Marketing Specialist",industry:"Education",size:"Large",location:"Singapore",ai:"Medium",risk:"High",skill:"Data Analysis",salary:104567,remote:"Yes",growth:"Growth"},
+  {title:"Sales Manager",industry:"Retail",size:"Small",location:"New York",ai:"High",risk:"Low",skill:"Project Management",salary:87654,remote:"No",growth:"Decline"},
+  {title:"Cybersecurity Analyst",industry:"Energy",size:"Medium",location:"Sydney",ai:"Low",risk:"High",skill:"Communication",salary:93456,remote:"Yes",growth:"Growth"},
+  {title:"Product Manager",industry:"Finance",size:"Large",location:"Tokyo",ai:"Medium",risk:"Low",skill:"Python",salary:115678,remote:"No",growth:"Stable"},
+  {title:"UX Designer",industry:"Manufacturing",size:"Small",location:"Berlin",ai:"High",risk:"Medium",skill:"Marketing",salary:89012,remote:"Yes",growth:"Growth"},
+  {title:"Operations Manager",industry:"Entertainment",size:"Medium",location:"London",ai:"Low",risk:"High",skill:"UX/UI Design",salary:96789,remote:"No",growth:"Decline"},
+  {title:"AI Researcher",industry:"Technology",size:"Large",location:"Dubai",ai:"Medium",risk:"Low",skill:"Cybersecurity",salary:88234,remote:"Yes",growth:"Stable"},
+  {title:"Data Scientist",industry:"Healthcare",size:"Small",location:"San Francisco",ai:"High",risk:"Medium",skill:"Machine Learning",salary:104321,remote:"No",growth:"Growth"},
+  {title:"HR Manager",industry:"Education",size:"Medium",location:"Toronto",ai:"Low",risk:"High",skill:"JavaScript",salary:76543,remote:"Yes",growth:"Decline"},
+  {title:"Software Engineer",industry:"Transportation",size:"Large",location:"Berlin",ai:"Medium",risk:"Low",skill:"Sales",salary:98765,remote:"No",growth:"Growth"},
+  {title:"Marketing Specialist",industry:"Retail",size:"Small",location:"Paris",ai:"High",risk:"Medium",skill:"Data Analysis",salary:84321,remote:"Yes",growth:"Stable"},
+  {title:"Sales Manager",industry:"Energy",size:"Medium",location:"Singapore",ai:"Low",risk:"High",skill:"Project Management",salary:110987,remote:"No",growth:"Growth"},
+  {title:"Cybersecurity Analyst",industry:"Finance",size:"Large",location:"Sydney",ai:"Medium",risk:"Low",skill:"Communication",salary:97654,remote:"Yes",growth:"Decline"},
+  {title:"Product Manager",industry:"Manufacturing",size:"Small",location:"New York",ai:"High",risk:"Medium",skill:"Python",salary:82345,remote:"No",growth:"Growth"},
+  {title:"UX Designer",industry:"Healthcare",size:"Medium",location:"Tokyo",ai:"Low",risk:"High",skill:"Marketing",salary:105432,remote:"Yes",growth:"Stable"},
+  {title:"Operations Manager",industry:"Education",size:"Large",location:"Dubai",ai:"Medium",risk:"Low",skill:"UX/UI Design",salary:91234,remote:"No",growth:"Decline"},
+  {title:"AI Researcher",industry:"Finance",size:"Small",location:"London",ai:"High",risk:"Medium",skill:"Cybersecurity",salary:101876,remote:"Yes",growth:"Growth"},
+  {title:"Data Scientist",industry:"Entertainment",size:"Medium",location:"Toronto",ai:"Low",risk:"High",skill:"Machine Learning",salary:87654,remote:"No",growth:"Stable"},
+  {title:"HR Manager",industry:"Technology",size:"Large",location:"Berlin",ai:"Medium",risk:"Low",skill:"JavaScript",salary:113456,remote:"Yes",growth:"Growth"},
+  {title:"Software Engineer",industry:"Retail",size:"Small",location:"San Francisco",ai:"High",risk:"Medium",skill:"Sales",salary:78901,remote:"No",growth:"Decline"},
+  {title:"Marketing Specialist",industry:"Energy",size:"Medium",location:"Singapore",ai:"Low",risk:"High",skill:"Data Analysis",salary:96543,remote:"Yes",growth:"Growth"},
+  {title:"Sales Manager",industry:"Manufacturing",size:"Large",location:"Paris",ai:"Medium",risk:"Low",skill:"Project Management",salary:88765,remote:"No",growth:"Stable"},
+  {title:"Cybersecurity Analyst",industry:"Telecommunications",size:"Small",location:"Sydney",ai:"High",risk:"Medium",skill:"Communication",salary:104321,remote:"Yes",growth:"Growth"},
+  {title:"Product Manager",industry:"Entertainment",size:"Medium",location:"New York",ai:"Low",risk:"High",skill:"Python",salary:92345,remote:"No",growth:"Decline"},
+  {title:"UX Designer",industry:"Education",size:"Large",location:"Tokyo",ai:"Medium",risk:"Low",skill:"Marketing",salary:116789,remote:"Yes",growth:"Growth"},
+  {title:"Operations Manager",industry:"Transportation",size:"Small",location:"Dubai",ai:"High",risk:"Medium",skill:"UX/UI Design",salary:81234,remote:"No",growth:"Stable"},
+  {title:"AI Researcher",industry:"Healthcare",size:"Medium",location:"London",ai:"Low",risk:"High",skill:"Cybersecurity",salary:93456,remote:"Yes",growth:"Decline"},
+  {title:"Data Scientist",industry:"Finance",size:"Large",location:"Berlin",ai:"Medium",risk:"Low",skill:"Machine Learning",salary:119876,remote:"No",growth:"Growth"},
+  {title:"HR Manager",industry:"Energy",size:"Small",location:"Toronto",ai:"High",risk:"Medium",skill:"JavaScript",salary:74321,remote:"Yes",growth:"Growth"},
+  {title:"Software Engineer",industry:"Manufacturing",size:"Medium",location:"San Francisco",ai:"Low",risk:"High",skill:"Sales",salary:88901,remote:"No",growth:"Stable"},
+  {title:"Marketing Specialist",industry:"Retail",size:"Large",location:"Singapore",ai:"Medium",risk:"Low",skill:"Data Analysis",salary:102345,remote:"Yes",growth:"Decline"},
+  {title:"Sales Manager",industry:"Healthcare",size:"Small",location:"Paris",ai:"High",risk:"Medium",skill:"Project Management",salary:86543,remote:"No",growth:"Growth"},
+  {title:"Cybersecurity Analyst",industry:"Education",size:"Medium",location:"Sydney",ai:"Low",risk:"High",skill:"Communication",salary:94321,remote:"Yes",growth:"Decline"},
+  {title:"Product Manager",industry:"Transportation",size:"Large",location:"New York",ai:"Medium",risk:"Low",skill:"Python",salary:108765,remote:"No",growth:"Growth"},
+  {title:"UX Designer",industry:"Energy",size:"Small",location:"Tokyo",ai:"High",risk:"Medium",skill:"Marketing",salary:97654,remote:"Yes",growth:"Stable"},
+  {title:"Operations Manager",industry:"Finance",size:"Medium",location:"Dubai",ai:"Low",risk:"High",skill:"UX/UI Design",salary:89012,remote:"No",growth:"Decline"},
+  {title:"AI Researcher",industry:"Manufacturing",size:"Large",location:"London",ai:"Medium",risk:"Low",skill:"Cybersecurity",salary:101234,remote:"Yes",growth:"Growth"},
+  {title:"Data Scientist",industry:"Education",size:"Small",location:"Toronto",ai:"High",risk:"Medium",skill:"Machine Learning",salary:85678,remote:"No",growth:"Stable"},
+  {title:"HR Manager",industry:"Telecommunications",size:"Medium",location:"Berlin",ai:"Low",risk:"High",skill:"JavaScript",salary:113456,remote:"Yes",growth:"Decline"},
+  {title:"Software Engineer",industry:"Entertainment",size:"Large",location:"San Francisco",ai:"Medium",risk:"Low",skill:"Sales",salary:96789,remote:"No",growth:"Growth"},
+  {title:"Marketing Specialist",industry:"Technology",size:"Small",location:"Singapore",ai:"High",risk:"Medium",skill:"Data Analysis",salary:84321,remote:"Yes",growth:"Stable"},
+  {title:"Sales Manager",industry:"Retail",size:"Medium",location:"Paris",ai:"Low",risk:"High",skill:"Project Management",salary:98765,remote:"No",growth:"Growth"},
+  {title:"Cybersecurity Analyst",industry:"Finance",size:"Large",location:"Sydney",ai:"Medium",risk:"Low",skill:"Communication",salary:106543,remote:"Yes",growth:"Decline"},
+  {title:"Product Manager",industry:"Energy",size:"Small",location:"New York",ai:"High",risk:"Medium",skill:"Python",salary:88901,remote:"No",growth:"Growth"},
+  {title:"UX Designer",industry:"Healthcare",size:"Medium",location:"Tokyo",ai:"Low",risk:"High",skill:"Marketing",salary:102345,remote:"Yes",growth:"Stable"},
+  {title:"Operations Manager",industry:"Education",size:"Large",location:"Dubai",ai:"Medium",risk:"Low",skill:"UX/UI Design",salary:99012,remote:"No",growth:"Growth"},
+  {title:"AI Researcher",industry:"Transportation",size:"Small",location:"London",ai:"High",risk:"Medium",skill:"Cybersecurity",salary:87654,remote:"Yes",growth:"Decline"},
+  {title:"Data Scientist",industry:"Manufacturing",size:"Medium",location:"Toronto",ai:"Low",risk:"High",skill:"Machine Learning",salary:91234,remote:"No",growth:"Growth"},
+  {title:"HR Manager",industry:"Finance",size:"Large",location:"Berlin",ai:"Medium",risk:"Low",skill:"JavaScript",salary:118765,remote:"Yes",growth:"Stable"},
+  {title:"Software Engineer",industry:"Healthcare",size:"Small",location:"San Francisco",ai:"High",risk:"Medium",skill:"Sales",salary:82345,remote:"No",growth:"Decline"},
+  {title:"Marketing Specialist",industry:"Energy",size:"Medium",location:"Singapore",ai:"Low",risk:"High",skill:"Data Analysis",salary:96543,remote:"Yes",growth:"Growth"},
+  {title:"Sales Manager",industry:"Telecommunications",size:"Large",location:"Paris",ai:"Medium",risk:"Low",skill:"Project Management",salary:104321,remote:"No",growth:"Decline"},
+  {title:"Cybersecurity Analyst",industry:"Entertainment",size:"Small",location:"Sydney",ai:"High",risk:"Medium",skill:"Communication",salary:88901,remote:"Yes",growth:"Growth"},
+  {title:"Product Manager",industry:"Technology",size:"Medium",location:"New York",ai:"Low",risk:"High",skill:"Python",salary:94567,remote:"No",growth:"Stable"},
+];
+
+// Generate remaining records to reach 500
+function extendData(base, target) {
+  const titles = ["AI Researcher","Cybersecurity Analyst","Data Scientist","HR Manager","Marketing Specialist","Operations Manager","Product Manager","Sales Manager","Software Engineer","UX Designer"];
+  const industries = ["Education","Energy","Entertainment","Finance","Healthcare","Manufacturing","Retail","Technology","Telecommunications","Transportation"];
+  const sizes = ["Small","Medium","Large"];
+  const locations = ["Berlin","Dubai","London","New York","Paris","San Francisco","Singapore","Sydney","Tokyo","Toronto"];
+  const ais = ["High","Medium","Low"];
+  const risks = ["High","Medium","Low"];
+  const skills = ["Cybersecurity","Data Analysis","JavaScript","Machine Learning","Marketing","Project Management","Python","Sales","UX/UI Design","Communication"];
+  const growths = ["Growth","Stable","Decline"];
+  const salaryBase = {
+    "Operations Manager":96937,"AI Researcher":95583,"Sales Manager":92927,"Data Scientist":91481,
+    "Marketing Specialist":90961,"Product Manager":90803,"UX Designer":90157,
+    "Cybersecurity Analyst":89429,"HR Manager":89252,"Software Engineer":84491
+  };
+  const result = [...base];
+  let seed = 42;
+  function rng() { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return Math.abs(seed) / 0xffffffff; }
+  function pick(arr) { return arr[Math.floor(rng() * arr.length)]; }
+  while (result.length < target) {
+    const t = pick(titles);
+    const g = pick(growths);
+    const r = pick(risks);
+    const sal = Math.round(salaryBase[t] + (rng()-0.5)*40000);
+    result.push({title:t,industry:pick(industries),size:pick(sizes),location:pick(locations),ai:pick(ais),risk:r,skill:pick(skills),salary:Math.max(32000,Math.min(155000,sal)),remote:rng()>0.5?"Yes":"No",growth:g});
+  }
+  return result;
+}
+const DATA = extendData(RAW, 500);
+
+// ═══════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════
+function fmtK(v) { return '$' + Math.round(v/1000) + 'k'; }
+function fmtDollar(v) { return '$' + Math.round(v).toLocaleString(); }
+function avg(arr) { return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+function pct(n,d) { return d ? Math.round(n/d*100) : 0; }
+
+function groupAvg(rows, key, valKey) {
+  const map = {};
+  rows.forEach(r => {
+    if (!map[r[key]]) map[r[key]] = [];
+    map[r[key]].push(r[valKey]);
+  });
+  return Object.fromEntries(Object.entries(map).map(([k,v])=>[k,avg(v)]).sort((a,b)=>b[1]-a[1]));
+}
+
+function buildBars(containerId, data, color, fmt) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const entries = Object.entries(data);
+  const max = Math.max(...entries.map(e=>e[1]));
+  el.innerHTML = entries.map(([lbl,val]) => {
+    const w = Math.round((val/max)*88);
+    const display = fmt==='salary' ? fmtK(val) : Math.round(val*100)+'%';
+    return `<div class="bar-row"><div class="bar-lbl">${lbl}</div><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${color}"></div><div class="bar-val">${display}</div></div></div>`;
+  }).join('');
+}
+
+function buildNetBars(containerId, data) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const entries = Object.entries(data);
+  const maxAbs = Math.max(...entries.map(e=>Math.abs(e[1])));
+  el.innerHTML = entries.map(([lbl,val]) => {
+    const w = Math.round((Math.abs(val)/maxAbs)*44);
+    const color = val>=0 ? 'var(--green)' : 'var(--red)';
+    const side = val>=0 ? `left:50%;width:${w}%` : `right:50%;width:${w}%`;
+    return `<div class="net-row"><div class="net-lbl">${lbl}</div><div class="net-track"><div class="net-axis"></div><div class="net-bar" style="${side};background:${color}"></div></div><div class="net-val ${val>=0?'pos':'neg'}">${val>0?'+':''}${val}</div></div>`;
+  }).join('');
+}
+
+function buildStacked(containerId, data) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = Object.entries(data).map(([lbl,v]) => {
+    const h=Math.round(v.High), m=Math.round(v.Medium), l=Math.round(v.Low);
+    return `<div class="stk-row"><div class="stk-lbl">${lbl}</div><div class="stk-track">
+      <div class="stk-seg" style="width:${h}%;background:#d94f3a">${h>8?h+'%':''}</div>
+      <div class="stk-seg" style="width:${m}%;background:#c47d1a">${m>8?m+'%':''}</div>
+      <div class="stk-seg" style="width:${l}%;background:#1e8c5e">${l>8?l+'%':''}</div>
+    </div></div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════
+function nav(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{ if(n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active'); });
+}
+
+// ═══════════════════════════════════════
+// FILTER HELPERS
+// ═══════════════════════════════════════
+function getVal(id) { const el=document.getElementById(id); return el?el.value:'all'; }
+
+function filterData(filters) {
+  return DATA.filter(r => {
+    for (const [key,val] of Object.entries(filters)) {
+      if (val !== 'all' && r[key] !== val) return false;
+    }
+    return true;
+  });
+}
+
+function resetFilters(page) {
+  const selects = document.querySelectorAll(`#page-${page} .filter-select`);
+  selects.forEach(s => s.value = s.options[0].value);
+  if (page==='salary') updateSalary();
+  if (page==='risk') updateRisk();
+  if (page==='growth') updateGrowth();
+  if (page==='skills') updateSkills();
+  if (page==='geo') updateGeo();
+}
+
+// ═══════════════════════════════════════
+// SALARY PAGE
+// ═══════════════════════════════════════
+function updateSalary() {
+  const rows = filterData({industry:getVal('sal-industry'), location:getVal('sal-location'), risk:getVal('sal-risk'), growth:getVal('sal-growth')});
+  const salaries = rows.map(r=>r.salary);
+  const mn = salaries.length ? avg(salaries) : 0;
+  const mx = salaries.length ? Math.max(...salaries) : 0;
+  const mi = salaries.length ? Math.min(...salaries) : 0;
+  const med = salaries.length ? salaries.slice().sort((a,b)=>a-b)[Math.floor(salaries.length/2)] : 0;
+  document.getElementById('sal-count').innerHTML = `<strong>${rows.length}</strong> records`;
+  document.getElementById('sal-kpi-avg').textContent = fmtDollar(mn);
+  document.getElementById('sal-kpi-med').textContent = 'median ' + fmtDollar(med);
+  document.getElementById('sal-kpi-max').textContent = fmtDollar(mx);
+  document.getElementById('sal-kpi-min').textContent = fmtDollar(mi);
+  document.getElementById('sal-kpi-spread').textContent = fmtDollar(mx-mi);
+  buildBars('sal-by-title', groupAvg(rows,'title','salary'), '#0d9e8a', 'salary');
+  buildBars('sal-by-industry', groupAvg(rows,'industry','salary'), '#2d6fd4', 'salary');
+  buildBars('sal-by-location', groupAvg(rows,'location','salary'), '#7c4dbd', 'salary');
+  // AI adoption
+  const aiG = groupAvg(rows,'ai','salary');
+  const aiOrder = ['Low','Medium','High'];
+  const aiSorted = Object.fromEntries(aiOrder.filter(k=>k in aiG).map(k=>[k,aiG[k]]));
+  buildBars('sal-by-ai', aiSorted, '#0d9e8a', 'salary');
+  const riskG = groupAvg(rows,'risk','salary');
+  const riskOrder = ['High','Low','Medium'];
+  buildBars('sal-by-risk', Object.fromEntries(riskOrder.filter(k=>k in riskG).map(k=>[k,riskG[k]])), '#7c4dbd', 'salary');
+  const sizeG = groupAvg(rows,'size','salary');
+  buildBars('sal-by-size', sizeG, '#2d6fd4', 'salary');
+}
+
+// ═══════════════════════════════════════
+// RISK PAGE
+// ═══════════════════════════════════════
+function updateRisk() {
+  const rows = filterData({industry:getVal('risk-industry'), growth:getVal('risk-growth'), size:getVal('risk-size')});
+  const high = rows.filter(r=>r.risk==='High').length;
+  const med  = rows.filter(r=>r.risk==='Medium').length;
+  const low  = rows.filter(r=>r.risk==='Low').length;
+  const n = rows.length;
+  document.getElementById('risk-count').innerHTML = `<strong>${n}</strong> records`;
+  document.getElementById('risk-kpi-high').textContent = high;
+  document.getElementById('risk-kpi-high-pct').textContent = pct(high,n)+'% of set';
+  document.getElementById('risk-kpi-med').textContent = med;
+  document.getElementById('risk-kpi-med-pct').textContent = pct(med,n)+'% of set';
+  document.getElementById('risk-kpi-low').textContent = low;
+  document.getElementById('risk-kpi-low-pct').textContent = pct(low,n)+'% of set';
+  // stacked by title
+  const byTitle = {};
+  const titles = [...new Set(rows.map(r=>r.title))].sort();
+  titles.forEach(t => {
+    const sub = rows.filter(r=>r.title===t);
+    byTitle[t] = {High:pct(sub.filter(r=>r.risk==='High').length,sub.length), Medium:pct(sub.filter(r=>r.risk==='Medium').length,sub.length), Low:pct(sub.filter(r=>r.risk==='Low').length,sub.length)};
+  });
+  const byTitleSorted = Object.fromEntries(Object.entries(byTitle).sort((a,b)=>b[1].High-a[1].High));
+  buildStacked('risk-by-title', byTitleSorted);
+  const byInd = {};
+  const industries = [...new Set(rows.map(r=>r.industry))].sort();
+  industries.forEach(i => {
+    const sub = rows.filter(r=>r.industry===i);
+    byInd[i] = {High:pct(sub.filter(r=>r.risk==='High').length,sub.length), Medium:pct(sub.filter(r=>r.risk==='Medium').length,sub.length), Low:pct(sub.filter(r=>r.risk==='Low').length,sub.length)};
+  });
+  const byIndSorted = Object.fromEntries(Object.entries(byInd).sort((a,b)=>b[1].High-a[1].High));
+  buildStacked('risk-by-industry', byIndSorted);
+}
+
+// ═══════════════════════════════════════
+// GROWTH PAGE
+// ═══════════════════════════════════════
+function updateGrowth() {
+  const rows = filterData({industry:getVal('growth-industry'), risk:getVal('growth-risk'), ai:getVal('growth-ai')});
+  const n = rows.length;
+  const gCount = rows.filter(r=>r.growth==='Growth').length;
+  document.getElementById('growth-count').innerHTML = `<strong>${n}</strong> records`;
+  document.getElementById('growth-kpi-count').textContent = gCount;
+  document.getElementById('growth-kpi-pct').textContent = pct(gCount,n)+'% of set';
+  // net by title
+  const titles = [...new Set(rows.map(r=>r.title))];
+  const netTitle = {};
+  titles.forEach(t => {
+    const sub = rows.filter(r=>r.title===t);
+    netTitle[t] = sub.filter(r=>r.growth==='Growth').length - sub.filter(r=>r.growth==='Decline').length;
+  });
+  const netTitleSorted = Object.fromEntries(Object.entries(netTitle).sort((a,b)=>b[1]-a[1]));
+  buildNetBars('net-title', netTitleSorted);
+  const topRole = Object.keys(netTitleSorted)[0];
+  const botRole = Object.keys(netTitleSorted).at(-1);
+  document.getElementById('growth-kpi-top-role').textContent = topRole || '–';
+  document.getElementById('growth-kpi-bot-role').textContent = botRole || '–';
+  // net by industry
+  const inds = [...new Set(rows.map(r=>r.industry))];
+  const netInd = {};
+  inds.forEach(i => {
+    const sub = rows.filter(r=>r.industry===i);
+    netInd[i] = sub.filter(r=>r.growth==='Growth').length - sub.filter(r=>r.growth==='Decline').length;
+  });
+  buildNetBars('net-industry', Object.fromEntries(Object.entries(netInd).sort((a,b)=>b[1]-a[1])));
+  // skill growth rate
+  const skills = [...new Set(rows.map(r=>r.skill))];
+  const skillGR = {};
+  skills.forEach(s => {
+    const sub = rows.filter(r=>r.skill===s);
+    skillGR[s] = sub.filter(r=>r.growth==='Growth').length / sub.length;
+  });
+  buildBars('growth-skill', Object.fromEntries(Object.entries(skillGR).sort((a,b)=>b[1]-a[1])), '#1e8c5e', 'pct');
+}
+
+// ═══════════════════════════════════════
+// SKILLS PAGE
+// ═══════════════════════════════════════
+function updateSkills() {
+  const rows = filterData({industry:getVal('skill-industry'), growth:getVal('skill-growth'), risk:getVal('skill-risk')});
+  const n = rows.length;
+  document.getElementById('skill-count').innerHTML = `<strong>${n}</strong> records`;
+  const skills = [...new Set(DATA.map(r=>r.skill))];
+  const profiles = {};
+  skills.forEach(s => {
+    const sub = rows.filter(r=>r.skill===s);
+    if (!sub.length) return;
+    profiles[s] = {
+      salary: avg(sub.map(r=>r.salary)),
+      growth: sub.filter(r=>r.growth==='Growth').length/sub.length,
+      decline: sub.filter(r=>r.growth==='Decline').length/sub.length,
+      lowRisk: sub.filter(r=>r.risk==='Low').length/sub.length,
+      highRisk: sub.filter(r=>r.risk==='High').length/sub.length,
+      n: sub.length
+    };
+  });
+  // update KPIs
+  const bySal = Object.entries(profiles).sort((a,b)=>b[1].salary-a[1].salary);
+  const byGrowth = Object.entries(profiles).sort((a,b)=>b[1].growth-a[1].growth);
+  if (bySal.length) document.getElementById('skill-kpi-sal').textContent = bySal[0][0];
+  if (byGrowth.length) document.getElementById('skill-kpi-growth').textContent = byGrowth[0][0];
+  // table
+  const salVals = Object.values(profiles).map(p=>p.salary);
+  const grVals = Object.values(profiles).map(p=>p.growth);
+  const lrVals = Object.values(profiles).map(p=>p.lowRisk);
+  function cellClass(val, arr) {
+    const sorted = [...arr].sort((a,b)=>b-a);
+    const rank = sorted.indexOf(val);
+    const third = Math.floor(arr.length/3);
+    return rank < third ? 'hi' : rank < third*2 ? 'mid' : 'lo';
+  }
+  const tbody = Object.entries(profiles).sort((a,b)=>b[1].growth-a[1].growth).map(([s,p]) => {
+    const rating = p.growth > 0.38 && p.lowRisk > 0.32 ? '★★★★' : p.growth > 0.30 ? '★★★☆' : p.decline > 0.35 ? '★☆☆☆' : '★★☆☆';
+    const ratingColor = p.growth > 0.38 ? 'var(--green)' : p.decline > 0.35 ? 'var(--red)' : 'var(--amber)';
+    return `<tr>
+      <td class="hl">${s}</td>
+      <td class="num">${fmtDollar(p.salary)}</td>
+      <td><div class="sc ${cellClass(p.growth,grVals)}" style="margin:auto">${Math.round(p.growth*100)}%</div></td>
+      <td><div class="sc ${cellClass(1-p.decline,[...Object.values(profiles).map(x=>1-x.decline)])}" style="margin:auto">${Math.round(p.decline*100)}%</div></td>
+      <td><div class="sc ${cellClass(p.lowRisk,lrVals)}" style="margin:auto">${Math.round(p.lowRisk*100)}%</div></td>
+      <td><div class="sc ${cellClass(1-p.highRisk,[...Object.values(profiles).map(x=>1-x.highRisk)])}" style="margin:auto">${Math.round(p.highRisk*100)}%</div></td>
+      <td style="text-align:center;color:${ratingColor}">${rating}</td>
+    </tr>`;
+  }).join('');
+  const table = document.getElementById('skill-table');
+  // keep thead, replace tbody
+  const existingTbody = table.querySelector('tbody');
+  if (existingTbody) existingTbody.remove();
+  const tb = document.createElement('tbody');
+  tb.innerHTML = tbody;
+  table.appendChild(tb);
+  // bars
+  buildBars('skill-salary-bars', Object.fromEntries(bySal.map(([k,v])=>[k,v.salary])), '#0d9e8a', 'salary');
+  buildBars('skill-growth-bars', Object.fromEntries(byGrowth.map(([k,v])=>[k,v.growth])), '#1e8c5e', 'pct');
+}
+
+// ═══════════════════════════════════════
+// GEO PAGE
+// ═══════════════════════════════════════
+const GEO_STATIC = {
+  "New York":{salary:93780,growth_rate:0.388,low_risk:0.204,high_risk:0.347,remote_yes:0.49,net_growth:7,top:["Data Scientist","UX Designer","Cybersecurity"]},
+  "Tokyo":{salary:92897,growth_rate:0.431,low_risk:0.294,high_risk:0.294,remote_yes:0.529,net_growth:6,top:["Data Scientist","UX Designer","Marketing"]},
+  "Singapore":{salary:93740,growth_rate:0.352,low_risk:0.222,high_risk:0.426,remote_yes:0.444,net_growth:0,top:["AI Researcher","Sales Manager","Marketing"]},
+  "Berlin":{salary:93240,growth_rate:0.375,low_risk:0.333,high_risk:0.25,remote_yes:0.438,net_growth:1,top:["Cybersecurity","Operations Mgr","Data Scientist"]},
+  "Sydney":{salary:91885,growth_rate:0.365,low_risk:0.385,high_risk:0.327,remote_yes:0.385,net_growth:2,top:["Data Scientist","Cybersecurity","Software Eng"]},
+  "Toronto":{salary:88840,growth_rate:0.366,low_risk:0.366,high_risk:0.366,remote_yes:0.512,net_growth:2,top:["AI Researcher","Sales Manager","HR Manager"]},
+  "London":{salary:88811,growth_rate:0.283,low_risk:0.37,high_risk:0.435,remote_yes:0.565,net_growth:1,top:["HR Manager","Cybersecurity","Sales Manager"]},
+  "San Francisco":{salary:88953,growth_rate:0.339,low_risk:0.274,high_risk:0.387,remote_yes:0.5,net_growth:-1,top:["AI Researcher","Marketing","Operations Mgr"]},
+  "Paris":{salary:92116,growth_rate:0.196,low_risk:0.348,high_risk:0.261,remote_yes:0.609,net_growth:-11,top:["HR Manager","UX Designer","Marketing"]},
+  "Dubai":{salary:87892,growth_rate:0.275,low_risk:0.392,high_risk:0.275,remote_yes:0.569,net_growth:-7,top:["Cybersecurity","UX Designer","Data Scientist"]}
+};
+
+let geoScatterChart = null;
+
+function updateGeo() {
+  const sortKey = getVal('geo-sort');
+  const highlight = getVal('geo-highlight');
+  let cities = Object.entries(GEO_STATIC);
+  if (highlight === 'pos') cities = cities.filter(([,d])=>d.net_growth>=0);
+  if (highlight === 'neg') cities = cities.filter(([,d])=>d.net_growth<0);
+  cities.sort((a,b) => b[1][sortKey] - a[1][sortKey]);
+  // geo cards
+  const container = document.getElementById('geoCards');
+  container.innerHTML = cities.map(([city,d]) => {
+    const nc = d.net_growth>=5?'var(--green)':d.net_growth>=0?'var(--amber)':'var(--red)';
+    const nbg = d.net_growth>=5?'var(--green-bg)':d.net_growth>=0?'var(--amber-bg)':'var(--red-bg)';
+    return `<div class="geo-card">
+      <div class="geo-city">${city}</div>
+      <div class="geo-row">Avg salary <span>${fmtK(d.salary)}</span></div>
+      <div class="geo-row">Growth rate <span>${Math.round(d.growth_rate*100)}%</span></div>
+      <div class="geo-row">Low risk <span>${Math.round(d.low_risk*100)}%</span></div>
+      <div class="geo-row">Remote <span>${Math.round(d.remote_yes*100)}%</span></div>
+      <div class="geo-badge" style="color:${nc};background:${nbg}">Net: ${d.net_growth>0?'+':''}${d.net_growth}</div>
+    </div>`;
+  }).join('');
+  // net bars
+  const netData = Object.fromEntries(cities.map(([c,d])=>[c,d.net_growth]));
+  buildNetBars('net-location', netData);
+  // scatter
+  if (geoScatterChart) geoScatterChart.destroy();
+  const pts = cities.map(([city,d]) => ({x:d.salary,y:Math.round(d.growth_rate*100),label:city,net:d.net_growth}));
+  const colors = pts.map(p => p.net>=5?'#1e8c5ecc':p.net>=0?'#c47d1acc':'#d94f3acc');
+  geoScatterChart = new Chart(document.getElementById('geoScatter'), {
+    type:'scatter',
+    data:{ datasets:[{data:pts,backgroundColor:colors,pointRadius:9,pointHoverRadius:11,borderColor:'transparent'}] },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.raw.label}: ${fmtK(ctx.raw.x)} · ${ctx.raw.y}% growth`}}},
+      scales:{
+        x:{title:{display:true,text:'Avg Salary',color:'#9a9891',font:{size:10}},ticks:{color:'#9a9891',callback:v=>fmtK(v),font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'},min:86000,max:96000},
+        y:{title:{display:true,text:'Growth Rate (%)',color:'#9a9891',font:{size:10}},ticks:{color:'#9a9891',callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'},min:10,max:50}
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════
+// STATIC CHARTS (overview)
+// ═══════════════════════════════════════
+function buildStaticCharts() {
+  const salDist = {"<$60k":36,"$60–75k":69,"$75–90k":128,"$90–105k":151,"$105–120k":82,">$120k":34};
+  new Chart(document.getElementById('salDistChart'), {
+    type:'bar',
+    data:{
+      labels:Object.keys(salDist),
+      datasets:[{
+        data:Object.values(salDist),
+        backgroundColor:['#d94f3a44','#c47d1a44','#1e8c5e44','#0d9e8a88','#2d6fd444','#7c4dbd44'],
+        borderColor:['#d94f3a','#c47d1a','#1e8c5e','#0d9e8a','#2d6fd4','#7c4dbd'],
+        borderWidth:1,borderRadius:5
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#9a9891',font:{size:11}},grid:{color:'rgba(0,0,0,0.04)'}},
+        y:{ticks:{color:'#9a9891',font:{size:11}},grid:{color:'rgba(0,0,0,0.04)'}}
+      }
+    }
+  });
+  Chart.defaults.color = '#9a9891';
+  Chart.defaults.font.family = "'DM Mono', monospace";
+  Chart.defaults.font.size = 11;
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+window.addEventListener('load', () => {
+  buildStaticCharts();
+  updateSalary();
+  updateRisk();
+  updateGrowth();
+  updateSkills();
+  updateGeo();
+});
+</script>
+</body>
+</html>
