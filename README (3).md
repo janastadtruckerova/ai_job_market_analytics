@@ -3,7 +3,7 @@
 
 A end-to-end data analytics project exploring an AI job market dataset across five analytical dimensions — delivered as a single-file interactive web application.
 
-**[→ View Live Application](https://your-username.github.io/ai-job-market-analytics)**
+**[→ View Live Application](https://janastadtruckerova.github.io/ai-job-market-analytics)**
 
 ---
 
